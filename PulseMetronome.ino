@@ -1,11 +1,16 @@
 /********** Preprocessor options **********************************************/
 
 /** In order for the program to print messages on serial */
-#define VERBOSE
+//#define VERBOSE
 
 
 /********** Include libraries *************************************************/
 
+/* LowPower library for less energy consumption */
+#include "LowPower.h"
+
+/* in order to use macro function to enable/disable modules */
+#include <avr/power.h>
 
 
 /********** IO pins ***********************************************************/
@@ -23,7 +28,7 @@
 #define NB_PRESS_CALIBRATION 4
 
 /** Duration of a pulse, in milliseconds */
-#define PULSE_DURATION 50
+#define PULSE_DURATION 60
 
 /********** Global variables **************************************************/
 
@@ -33,6 +38,8 @@ unsigned long int pulse_delay = 1000;
 /** The offset of the pulse when compared to the core clock, in milliseconds */
 unsigned long int pulse_offset = 0;
 
+/** The duration of idle mode between two pulses */
+period_t pulse_sleep_duration = SLEEP_500MS;
 
 /********** Additionnal functions *********************************************/
 
@@ -72,6 +79,21 @@ void detectPulse()
     // Finally average duration and set values (pressed N times so N-1 intervals)
     pulse_delay = (time - first_press)/(NB_PRESS_CALIBRATION-1);
     pulse_offset = time % pulse_delay;
+    if(pulse_delay - PULSE_DURATION < 15){
+        pulse_sleep_duration = SLEEP_15MS;
+    }else if(pulse_delay - PULSE_DURATION < 30){
+        pulse_sleep_duration = SLEEP_30MS;
+    }else if(pulse_delay - PULSE_DURATION < 60){
+        pulse_sleep_duration = SLEEP_60MS;
+    }else if(pulse_delay - PULSE_DURATION < 120){
+        pulse_sleep_duration = SLEEP_120MS;
+    }else if(pulse_delay - PULSE_DURATION < 250){
+        pulse_sleep_duration = SLEEP_250MS;
+    }else if(pulse_delay - PULSE_DURATION < 500){
+        pulse_sleep_duration = SLEEP_500MS;
+    }else{
+        pulse_sleep_duration = SLEEP_1S;
+    }
 
 #ifdef VERBOSE
     // Inform user
@@ -85,6 +107,12 @@ void detectPulse()
 
 void setup()
 {
+    // disable ADC
+    ADCSRA = 0;
+    // turn off all modules
+    power_all_disable ();
+    // Except timer 0
+    power_timer0_enable();
 #ifdef VERBOSE
     Serial.begin(9600);
 #endif
@@ -94,16 +122,18 @@ void setup()
 
 void loop()
 {
+    // Wait for the pulse to happen
+    while((millis() - pulse_offset) % pulse_delay > PULSE_DURATION);
+    digitalWrite(PIN_VIBRATOR, HIGH);
+    // Sleep before turning off pulse
+    LowPower.idle(SLEEP_60MS, ADC_OFF, TIMER2_OFF, TIMER1_OFF, TIMER0_ON, SPI_OFF, USART0_OFF, TWI_OFF);
+    digitalWrite(PIN_VIBRATOR, LOW);
+
     // Check if user wants to set different pulse
     if(digitalRead(PIN_BUTTON) == LOW){
-        digitalWrite(PIN_VIBRATOR, LOW);
         detectPulse();
     }
 
-    // Vibrate at requested time
-    if((millis() - pulse_offset) % pulse_delay < PULSE_DURATION){
-        digitalWrite(PIN_VIBRATOR, HIGH);
-    }else{
-        digitalWrite(PIN_VIBRATOR, LOW);
-    }
+    // Put everything on sleep except timer 0, used for millis() function
+    LowPower.idle(pulse_sleep_duration, ADC_OFF, TIMER2_OFF, TIMER1_OFF, TIMER0_ON, SPI_OFF, USART0_OFF, TWI_OFF);
 }
