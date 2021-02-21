@@ -16,7 +16,7 @@
 /********** IO pins ***********************************************************/
 
 /** The pin on which the vibration motor is connected */
-#define PIN_VIBRATOR 2
+#define PIN_PULSE 2
 
 /** The pin on which the control button is connected */
 #define PIN_BUTTON 12
@@ -50,7 +50,7 @@ void detectPulse()
 #endif
 
     // Disable vibrator
-    digitalWrite(PIN_VIBRATOR, LOW);
+    digitalWrite(PIN_PULSE, LOW);
 
     // Wait for button to be off
     while(digitalRead(PIN_BUTTON) != HIGH);
@@ -61,20 +61,20 @@ void detectPulse()
 
     // Wait for user to press good amount of times
     for(unsigned int i = 0; i < NB_PRESS_CALIBRATION-1; i++){
-        digitalWrite(PIN_VIBRATOR, HIGH);
+        digitalWrite(PIN_PULSE, HIGH);
         // Wait for button to be off
         while(digitalRead(PIN_BUTTON) != HIGH);
-        digitalWrite(PIN_VIBRATOR, LOW);
+        digitalWrite(PIN_PULSE, LOW);
         // Wait for user to press
         while(digitalRead(PIN_BUTTON) != LOW);
     }
     // Get time now
     unsigned long int time = millis();
-    digitalWrite(PIN_VIBRATOR, HIGH);
+    digitalWrite(PIN_PULSE, HIGH);
 
     // Wait for button to be off to finally disable vibrator
     while(digitalRead(PIN_BUTTON) != HIGH);
-    digitalWrite(PIN_VIBRATOR, LOW);
+    digitalWrite(PIN_PULSE, LOW);
 
     // Finally average duration and set values (pressed N times so N-1 intervals)
     pulse_delay = (time - first_press)/(NB_PRESS_CALIBRATION-1);
@@ -117,17 +117,17 @@ void setup()
     Serial.begin(9600);
 #endif
     pinMode(PIN_BUTTON, INPUT_PULLUP);
-    pinMode(PIN_VIBRATOR, OUTPUT);
+    pinMode(PIN_PULSE, OUTPUT);
 }
 
 void loop()
 {
     // Wait for the pulse to happen
     while((millis() - pulse_offset) % pulse_delay > PULSE_DURATION);
-    digitalWrite(PIN_VIBRATOR, HIGH);
+    digitalWrite(PIN_PULSE, HIGH);
     // Sleep before turning off pulse
     LowPower.idle(SLEEP_60MS, ADC_OFF, TIMER2_OFF, TIMER1_OFF, TIMER0_ON, SPI_OFF, USART0_OFF, TWI_OFF);
-    digitalWrite(PIN_VIBRATOR, LOW);
+    digitalWrite(PIN_PULSE, LOW);
 
     // Check if user wants to set different pulse
     if(digitalRead(PIN_BUTTON) == LOW){
