@@ -15,3 +15,7 @@ The metronome will boot at a default rhythm of 60 beats per minute. This value c
 This sketch makes use of the LowPower library available on [github](https://github.com/rocketscream/Low-Power). Make sure to have it under your library directory.
 
 This is done in order to draw a minimum amount of current if you wish to run your device on a battery.
+
+-----
+
+Credits : [Brice Croix 2021](https://github.com/BriceCroix/ArduinoPulseMetronome)
